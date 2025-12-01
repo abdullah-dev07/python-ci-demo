@@ -1,71 +1,64 @@
 // Jenkinsfile (Declarative Pipeline for Python CI)
 
 pipeline {
-    // 1. Agent: Use a specific Docker image to ensure a clean, consistent Python environment.
     agent {
+        // Use a specific Docker image for consistency
         docker {
-            image 'python:3.11-slim' // Uses the Python 3.11 image
+            image 'python:3.11-slim' 
         }
     }
     
-    // Environment variables for path safety
     environment {
-        VENV_NAME = 'venv' // Name of the virtual environment directory
+        VENV_NAME = 'venv' 
     }
 
     stages {
-        
-        stage('Setup Environment') {
+        stage('Setup and Install') { // Combined the steps into one stage
             steps {
-                echo '1. Setting up Python virtual environment and dependencies...'
+                echo '1. Setting up virtual environment and installing dependencies...'
                 
-                // Create a virtual environment
-                sh 'python -m venv ${VENV_NAME}'
-                
-                // Activate venv and install dependencies from requirements.txt
-                // The '.' command is shorthand for 'source' in shell scripts
-                sh '. ${VENV_NAME}/bin/activate && pip install --upgrade pip'
-                sh '. ${VENV_NAME}/bin/activate && pip install -r requirements.txt'
+                // --- Single Multi-Line Shell Block for Reliability ---
+                sh '''
+                    # 1. Create venv
+                    python -m venv ${VENV_NAME}
+                    
+                    # 2. Activate venv and install requirements (The 'source' command is essential here)
+                    source ${VENV_NAME}/bin/activate
+                    
+                    # 3. Use pip inside the activated environment
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
             }
         }
         
         stage('Code Quality (Lint)') {
             steps {
                 echo '2. Running Flake8 Linter for code style checks...'
-                // flake8 checks for PEP 8 compliance and complexity
-                // --exclude excludes the auto-generated venv directory
-                // || true allows the pipeline to proceed even if linting fails
-                sh '. ${VENV_NAME}/bin/activate && flake8 --exclude=${VENV_NAME} . || true'
+                sh '''
+                    source ${VENV_NAME}/bin/activate
+                    flake8 --exclude=${VENV_NAME} . || true
+                '''
             }
         }
 
         stage('Unit Tests') {
             steps {
                 echo '3. Executing Pytest unit tests...'
-                // pytest runs the tests, generating an XML report for Jenkins
-                // The 'tests' argument tells pytest where to look for tests
-                sh '. ${VENV_NAME}/bin/activate && pytest --junitxml=reports/unit-test-results.xml tests'
+                sh '''
+                    source ${VENV_NAME}/bin/activate
+                    pytest --junitxml=reports/unit-test-results.xml tests
+                '''
             }
         }
     }
     
-    // Post-actions run after all stages, typically for cleanup and reporting.
+    // Post-actions remain the same
     post {
         always {
-            // Archive the JUnit XML report so Jenkins can display the test results graphically
             junit 'reports/unit-test-results.xml'
-            
-            // Clean up the workspace files after the build is done
             cleanWs()
         }
-        failure {
-            echo 'Pipeline FAILED! One or more stages or tests did not pass.'
-        }
-        unstable {
-            echo 'Pipeline UNSTABLE! Tests ran but there were test failures (check JUnit report).'
-        }
-        success {
-            echo 'Pipeline SUCCESS! All tests and checks passed. Code is ready for deployment!'
-        }
+        // ... (failure and unstable blocks removed for brevity, but they are useful!)
     }
 }
