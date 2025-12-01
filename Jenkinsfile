@@ -14,6 +14,7 @@ pipeline {
     }
 
     stages {
+        
         stage('Setup Environment') {
             steps {
                 echo '1. Setting up Python virtual environment and dependencies...'
