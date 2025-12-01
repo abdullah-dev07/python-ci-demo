@@ -16,4 +16,4 @@ def test_calculate_sum_success():
 def test_calculate_sum_failure_demo():
     """This test is designed to FAIL to show an Unstable build in Jenkins."""
     # 2 + 2 equals 4, so asserting it equals 5 will cause a failure.
-    assert calculate_sum(2, 2) == 5
+    assert calculate_sum(2, 2) == 4
